@@ -1,5 +1,6 @@
 package com.qingshuige.tangyuan.viewmodels;
 
+import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,19 +11,44 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.qingshuige.tangyuan.R;
+import com.qingshuige.tangyuan.data.DataTools;
 import com.qingshuige.tangyuan.network.ApiHelper;
 import com.squareup.picasso.Callback;
 import com.squareup.picasso.Picasso;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class GalleryAdapter extends RecyclerView.Adapter<GalleryAdapter.ViewHolder> {
 
-    private final List<String> imageGuids;
+    private final List<String> imageUrls = new ArrayList<>();
+    private int squareLengthDp = 0;
     private OnItemClickListener onItemClickListener;
+    Context context;
 
-    public GalleryAdapter(List<String> imageGuids) {
-        this.imageGuids = imageGuids;
+    public GalleryAdapter(Context context, List<String> imageGuids, int squareLengthDp) {
+        this.context = context;
+        for (String guid : imageGuids) {
+            imageUrls.add(ApiHelper.getFullImageURL(guid));
+        }
+        this.squareLengthDp = squareLengthDp;
+    }
+
+    public GalleryAdapter(Context context, List<String> imageGuids) {
+        this.context = context;
+        for (String guid : imageGuids) {
+            imageUrls.add(ApiHelper.getFullImageURL(guid));
+        }
+    }
+
+    public GalleryAdapter(Context context, int squareLengthDp) {
+        this.context = context;
+        this.squareLengthDp = squareLengthDp;
+    }
+
+    public GalleryAdapter(Context context) {
+        this.context = context;
     }
 
     @NonNull
@@ -34,8 +60,14 @@ public class GalleryAdapter extends RecyclerView.Adapter<GalleryAdapter.ViewHold
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        if (squareLengthDp != 0) {
+            //将ImageView设为正方形
+            holder.getImageView().getLayoutParams().width = DataTools.dpToPx(context, squareLengthDp);
+            holder.getImageView().getLayoutParams().height = DataTools.dpToPx(context, squareLengthDp);
+        }
+
         Picasso.get()
-                .load(ApiHelper.getFullImageURL(imageGuids.get(position)))
+                .load(imageUrls.get(position))
                 .resize(1280, 0)
                 .centerInside()
                 .placeholder(R.drawable.img_placeholder)
@@ -57,11 +89,25 @@ public class GalleryAdapter extends RecyclerView.Adapter<GalleryAdapter.ViewHold
 
     @Override
     public int getItemCount() {
-        return imageGuids.size();
+        return imageUrls.size();
+    }
+
+    public void onItemMove(int fromPosition, int toPosition) {
+        Collections.swap(imageUrls, fromPosition, toPosition);
+        notifyItemMoved(fromPosition, toPosition);
     }
 
     public void setOnItemClickListener(OnItemClickListener listener) {
         onItemClickListener = listener;
+    }
+
+    public void addImage(String url) {
+        imageUrls.add(url);
+        notifyItemInserted(imageUrls.size() - 1);
+    }
+
+    public List<String> getImageUrls() {
+        return imageUrls;
     }
 
     public interface OnItemClickListener {
@@ -74,7 +120,7 @@ public class GalleryAdapter extends RecyclerView.Adapter<GalleryAdapter.ViewHold
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
 
-            imageView = (ImageView) itemView.findViewById(R.id.navAvatarView);
+            imageView = itemView.findViewById(R.id.navAvatarView);
         }
 
         public ImageView getImageView() {

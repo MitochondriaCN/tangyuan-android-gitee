@@ -273,7 +273,7 @@ public class PostActivity extends AppCompatActivity {
                     images.add(postInfo.getImage3GUID());
                 }
             }
-            GalleryAdapter adapter = new GalleryAdapter(images);
+            GalleryAdapter adapter = new GalleryAdapter(this, images);
             adapter.setOnItemClickListener(this::showImageWindow);
             gallery.setAdapter(adapter);
         }

@@ -7,6 +7,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Bitmap;
+import android.graphics.ImageDecoder;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
 import android.os.Bundle;
@@ -33,6 +34,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.DividerItemDecoration;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.snackbar.BaseTransientBottomBar;
 import com.google.android.material.snackbar.Snackbar;
@@ -41,7 +46,9 @@ import com.qingshuige.tangyuan.data.MediaTools;
 import com.qingshuige.tangyuan.network.Category;
 import com.qingshuige.tangyuan.network.CreatPostMetadataDto;
 import com.qingshuige.tangyuan.network.PostBody;
+import com.qingshuige.tangyuan.view.SpaceItemDecoration;
 import com.qingshuige.tangyuan.viewmodels.CategorySpinnerAdapter;
+import com.qingshuige.tangyuan.viewmodels.GalleryAdapter;
 import com.squareup.picasso.Picasso;
 
 import java.io.ByteArrayOutputStream;
@@ -64,12 +71,12 @@ public class NewPostActivity extends AppCompatActivity {
     private TextView byteCounter;
     private ProgressBar pgBar;
 
-    private ImageView imageView1;
-    private ImageView imageView2;
-    private ImageView imageView3;
     private Spinner spinnerSection;
     private Spinner spinnerCategory;
     private Menu menu;
+
+    private RecyclerView rcvSelectedImages;
+    private GalleryAdapter galleryAdapter;
 
     private ExecutorService es;
     private Handler handler;
@@ -92,14 +99,13 @@ public class NewPostActivity extends AppCompatActivity {
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setDisplayShowHomeEnabled(true);
 
-        textEdit = (EditText) findViewById(R.id.textEdit);
-        byteCounter = (TextView) findViewById(R.id.byteCounter);
+        textEdit = findViewById(R.id.textEdit);
+        byteCounter = findViewById(R.id.byteCounter);
         pgBar = findViewById(R.id.progressBar);
-        imageView1 = (ImageView) findViewById(R.id.imageView1);
-        imageView2 = (ImageView) findViewById(R.id.imageView2);
-        imageView3 = (ImageView) findViewById(R.id.imageView3);
         spinnerSection = findViewById(R.id.spinnerSection);
         spinnerCategory = findViewById(R.id.spinnerCategory);
+
+        rcvSelectedImages = findViewById(R.id.rcvSelectedImages);
 
         es = Executors.newSingleThreadExecutor();
         handler = new Handler(Looper.getMainLooper());
@@ -125,16 +131,41 @@ public class NewPostActivity extends AppCompatActivity {
             }
         });
 
-        imageView1.setOnClickListener(new ImageViewOnClickListener());
+        initializeSelectedImagesRecyclerView();
 
         //板块选择
-        ArrayAdapter<String> sectionAdapter = new ArrayAdapter<>(this,
-                android.R.layout.simple_spinner_item,
-                new String[]{getString(R.string.menu_normalchat), getString(R.string.menu_chitchat)});
-        sectionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerSection.setAdapter(sectionAdapter);
+        loadSectionSelector();
 
         //领域选择
+        loadCategorySelector();
+    }
+
+    private void initializeSelectedImagesRecyclerView() {
+        galleryAdapter = new GalleryAdapter(this, 150);
+        rcvSelectedImages.setAdapter(galleryAdapter);
+        rcvSelectedImages.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
+        rcvSelectedImages.addItemDecoration(new SpaceItemDecoration(10));
+
+        // 设置ItemTouchHelper实现拖拽
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(
+                ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT, 0) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                int fromPosition = viewHolder.getAdapterPosition();
+                int toPosition = target.getAdapterPosition();
+                galleryAdapter.onItemMove(fromPosition, toPosition);
+                return true;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+                // 不处理滑动删除
+            }
+        });
+        itemTouchHelper.attachToRecyclerView(rcvSelectedImages);
+    }
+
+    private void loadCategorySelector() {
         TangyuanApplication.getApi().getAllCategories().enqueue(new Callback<List<Category>>() {
             @Override
             public void onResponse(Call<List<Category>> call, Response<List<Category>> response) {
@@ -166,6 +197,14 @@ public class NewPostActivity extends AppCompatActivity {
         });
     }
 
+    private void loadSectionSelector() {
+        ArrayAdapter<String> sectionAdapter = new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_item,
+                new String[]{getString(R.string.menu_normalchat), getString(R.string.menu_chitchat)});
+        sectionAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerSection.setAdapter(sectionAdapter);
+    }
+
     @Override
     public boolean onSupportNavigateUp() {
         finish();
@@ -183,14 +222,7 @@ public class NewPostActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         //选择图片
         if (item.getItemId() == R.id.image_button) {
-            //假如imageView有空闲
-            if (imageView1.getDrawable() == null ||
-                    imageView2.getDrawable() == null ||
-                    imageView3.getDrawable() == null) {
-                //选择图片
-                Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
-                startActivityForResult(intent, 1);
-            }
+            addImage();
         }
 
         //发帖
@@ -227,6 +259,15 @@ public class NewPostActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    private void addImage() {
+        //假如imageView有空闲
+        if (galleryAdapter.getItemCount() < 3) {
+            //选择图片
+            Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+            startActivityForResult(intent, 1);
+        }
+    }
+
     private void sendPostAsync(Context context) {
         menu.findItem(R.id.send_post_button).setEnabled(false);
         pgBar.setVisibility(View.VISIBLE);
@@ -235,26 +276,21 @@ public class NewPostActivity extends AppCompatActivity {
             try {
                 //1.上传图片
                 List<String> guids = new ArrayList<>();
-                List<ImageView> imageViewList = new ArrayList<>();
-                imageViewList.add(imageView1);
-                imageViewList.add(imageView2);
-                imageViewList.add(imageView3);//这个List只是为了foreach方便
-                for (ImageView v : imageViewList) {
-                    if (v.getDrawable() != null) {
-                        Bitmap bitmap = MediaTools.compressToSize(NewPostActivity.this,
-                                ((BitmapDrawable) v.getDrawable()).getBitmap(),
-                                1.5f);
-                        ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
-                        byte[] bytes = stream.toByteArray();
-                        RequestBody requestBody = RequestBody.create(MediaType.parse("image/jpeg"), bytes);
-                        MultipartBody.Part part =
-                                MultipartBody.Part.createFormData("file", "image.jpg", requestBody);
-                        String guid =
-                                new ArrayList<>(TangyuanApplication.getApi().postImage(part).execute().body().values())
-                                        .get(0);
-                        guids.add(guid);
-                    }
+                for (String u : galleryAdapter.getImageUrls()) {
+                    ImageDecoder.Source src = ImageDecoder.createSource(context.getContentResolver(), Uri.parse(u));
+                    Bitmap uncompressedBitmap = ImageDecoder.decodeBitmap(src);
+                    Bitmap compressedBitmap = MediaTools.compressToSize(NewPostActivity.this,
+                            uncompressedBitmap, 1.5f);
+                    ByteArrayOutputStream stream = new ByteArrayOutputStream();
+                    compressedBitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                    byte[] bytes = stream.toByteArray();
+                    RequestBody requestBody = RequestBody.create(MediaType.parse("image/jpeg"), bytes);
+                    MultipartBody.Part part =
+                            MultipartBody.Part.createFormData("file", "image.jpg", requestBody);
+                    String guid =
+                            new ArrayList<>(TangyuanApplication.getApi().postImage(part).execute().body().values())
+                                    .get(0);
+                    guids.add(guid);
                 }
 
                 //2.上传元数据
@@ -309,29 +345,7 @@ public class NewPostActivity extends AppCompatActivity {
         switch (requestCode) {
             case 1://选择图片
                 if (resultCode == RESULT_OK && data != null) {
-                    //轮流填充三个imageView
-                    if (imageView1.getDrawable() == null) {
-                        Picasso.get()
-                                .load(data.getData())
-                                .resize(4000, 0)
-                                .centerCrop()
-                                .into(imageView1);
-                        break;
-                    } else if (imageView2.getDrawable() == null) {
-                        Picasso.get()
-                                .load(data.getData())
-                                .resize(4000, 0)
-                                .centerCrop()
-                                .into(imageView2);
-                        break;
-                    } else if (imageView3.getDrawable() == null) {
-                        Picasso.get()
-                                .load(data.getData())
-                                .resize(4000, 0)
-                                .centerCrop()
-                                .into(imageView3);
-                        break;
-                    }
+                    galleryAdapter.addImage(data.getData().toString());
                 }
                 break;
         }
