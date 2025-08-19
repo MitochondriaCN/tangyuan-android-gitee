@@ -9,6 +9,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.ImageDecoder;
 import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -46,6 +47,7 @@ import com.qingshuige.tangyuan.data.MediaTools;
 import com.qingshuige.tangyuan.network.Category;
 import com.qingshuige.tangyuan.network.CreatPostMetadataDto;
 import com.qingshuige.tangyuan.network.PostBody;
+import com.qingshuige.tangyuan.ui.PhotoDialogFragment;
 import com.qingshuige.tangyuan.view.SpaceItemDecoration;
 import com.qingshuige.tangyuan.viewmodels.CategorySpinnerAdapter;
 import com.qingshuige.tangyuan.viewmodels.GalleryAdapter;
@@ -142,6 +144,7 @@ public class NewPostActivity extends AppCompatActivity {
 
     private void initializeSelectedImagesRecyclerView() {
         galleryAdapter = new GalleryAdapter(this, 150);
+        galleryAdapter.setIsDeleteButtonVisible(true);
         rcvSelectedImages.setAdapter(galleryAdapter);
         rcvSelectedImages.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
         rcvSelectedImages.addItemDecoration(new SpaceItemDecoration(10));
@@ -163,6 +166,9 @@ public class NewPostActivity extends AppCompatActivity {
             }
         });
         itemTouchHelper.attachToRecyclerView(rcvSelectedImages);
+
+        galleryAdapter.setOnItemClickListener(drawable ->
+                PhotoDialogFragment.create(((BitmapDrawable) drawable).getBitmap()).show(getSupportFragmentManager(), null));
     }
 
     private void loadCategorySelector() {
@@ -348,18 +354,6 @@ public class NewPostActivity extends AppCompatActivity {
                     galleryAdapter.addImage(data.getData().toString());
                 }
                 break;
-        }
-    }
-
-    private class ImageViewOnClickListener implements View.OnClickListener {
-        private ImageView imageView;
-
-        @Override
-        public void onClick(View view) {
-            imageView = (ImageView) view;
-            if (imageView.getDrawable() != null) {
-                imageView.setImageDrawable(null);
-            }
         }
     }
 

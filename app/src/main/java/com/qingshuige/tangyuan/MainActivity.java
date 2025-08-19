@@ -1,12 +1,10 @@
 package com.qingshuige.tangyuan;
 
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Menu;
@@ -14,10 +12,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.navigation.NavigationView;
 
-import androidx.activity.EdgeToEdge;
 import androidx.appcompat.widget.SearchView;
 import androidx.core.view.MenuItemCompat;
 import androidx.navigation.NavController;
@@ -29,26 +25,17 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.google.gson.JsonObject;
 import com.qingshuige.tangyuan.data.DataTools;
-import com.qingshuige.tangyuan.databinding.ActivityMainBinding;
 import com.qingshuige.tangyuan.network.ApiHelper;
 import com.qingshuige.tangyuan.network.PostMetadata;
 import com.qingshuige.tangyuan.network.User;
-import com.qingshuige.tangyuan.viewmodels.PostInfo;
 import com.squareup.picasso.Picasso;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 
-import okhttp3.ResponseBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-import retrofit2.http.FieldMap;
 
 /*
  *
@@ -93,7 +80,7 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupActionBarWithNavController(this, navController, mAppBarConfiguration);
         NavigationUI.setupWithNavController(navigationView, navController);
 
-        navHeaderView.findViewById(R.id.navAvatarView).setOnClickListener(view -> {
+        navHeaderView.findViewById(R.id.imgImageView).setOnClickListener(view -> {
             if (tm.getToken() == null) {
                 Intent intent = new Intent(MainActivity.this, LoginActivity.class);
                 startActivity(intent);
@@ -219,7 +206,7 @@ public class MainActivity extends AppCompatActivity {
                                 .load(ApiHelper.getFullImageURL(user.avatarGuid))
                                 .resize(100, 0)
                                 .centerCrop()
-                                .into((ImageView) navHeaderView.findViewById(R.id.navAvatarView));
+                                .into((ImageView) navHeaderView.findViewById(R.id.imgImageView));
                         ((TextView) navHeaderView.findViewById(R.id.navNicknameView)).setText(user.nickName);
                         ((TextView) navHeaderView.findViewById(R.id.navBioView)).setText(user.bio);
                     });

@@ -8,6 +8,7 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 
 import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.qingshuige.tangyuan.R;
@@ -24,6 +25,7 @@ public class GalleryAdapter extends RecyclerView.Adapter<GalleryAdapter.ViewHold
 
     private final List<String> imageUrls = new ArrayList<>();
     private int squareLengthDp = 0;
+    private boolean isDeleteButtonVisible = false;
     private OnItemClickListener onItemClickListener;
     Context context;
 
@@ -62,8 +64,18 @@ public class GalleryAdapter extends RecyclerView.Adapter<GalleryAdapter.ViewHold
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         if (squareLengthDp != 0) {
             //将ImageView设为正方形
-            holder.getImageView().getLayoutParams().width = DataTools.dpToPx(context, squareLengthDp);
-            holder.getImageView().getLayoutParams().height = DataTools.dpToPx(context, squareLengthDp);
+            holder.getRoot().getLayoutParams().width = DataTools.dpToPx(context, squareLengthDp);
+            holder.getRoot().getLayoutParams().height = DataTools.dpToPx(context, squareLengthDp);
+        }
+
+        if (isDeleteButtonVisible) {
+            holder.getDeleteButton().setVisibility(View.VISIBLE);
+            holder.getDeleteButton().setOnClickListener(view -> {
+                imageUrls.remove(holder.getAdapterPosition());
+                notifyItemRemoved(holder.getAdapterPosition());
+            });
+        } else {
+            holder.getDeleteButton().setVisibility(View.GONE);
         }
 
         Picasso.get()
@@ -101,6 +113,10 @@ public class GalleryAdapter extends RecyclerView.Adapter<GalleryAdapter.ViewHold
         onItemClickListener = listener;
     }
 
+    public void setIsDeleteButtonVisible(boolean visible) {
+        isDeleteButtonVisible = visible;
+    }
+
     public void addImage(String url) {
         imageUrls.add(url);
         notifyItemInserted(imageUrls.size() - 1);
@@ -116,15 +132,27 @@ public class GalleryAdapter extends RecyclerView.Adapter<GalleryAdapter.ViewHold
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         private ImageView imageView;
+        private ImageView deleteButton;
+        private ConstraintLayout root;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
 
-            imageView = itemView.findViewById(R.id.navAvatarView);
+            imageView = itemView.findViewById(R.id.imgImageView);
+            deleteButton = itemView.findViewById(R.id.imgDeleteButton);
+            root = itemView.findViewById(R.id.root);
         }
 
         public ImageView getImageView() {
             return imageView;
+        }
+
+        public ImageView getDeleteButton() {
+            return deleteButton;
+        }
+
+        public ConstraintLayout getRoot() {
+            return root;
         }
     }
 }
