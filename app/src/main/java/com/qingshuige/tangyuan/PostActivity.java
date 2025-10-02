@@ -214,7 +214,7 @@ public class PostActivity extends AppCompatActivity {
 
                         @Override
                         public void onFailure(Call<ResponseBody> call, Throwable throwable) {
-
+                            //TODO
                         }
                     });
                     break;
